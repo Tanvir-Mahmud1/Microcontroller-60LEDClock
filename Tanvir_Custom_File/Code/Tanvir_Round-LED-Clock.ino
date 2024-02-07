@@ -1,14 +1,13 @@
 /*
   WiFi connected round LED Clock. It gets NTP time from the internet and translates to a 60 RGB WS2812B LED strip.
-
   If you have another orientation where the wire comes out then change the methods getLEDHour and getLEDMinuteOrSecond
-
-  Happy programming, Leon van den Beukel, march 2019
-
   ---  
   NTP and summer time code based on:
   https://tttapa.github.io/ESP8266/Chap15%20-%20NTP.html 
   https://github.com/SensorsIot/NTPtimeESP/blob/master/NTPtimeESP.cpp (for US summer time support check this link)  
+
+  Customized code on line [20-22, 25, 45, 47, 64, 118, 173, 175, 194, 195, 197, 301-326, 339-]
+  May varry if i added lines or deleted lines.
   
 */
 
@@ -18,32 +17,34 @@
 #include <FastLED.h>
 #define DEBUG_ON
 
-const char ssid[] = "Redmi Note 10 5G";                          // Your network SSID name here
-const char pass[] = "tanvir1234";                          // Your network password here
-unsigned long timeZone = 6.0;                     // Change this value to your local timezone (in my case +1 for Amsterdam)
+const char ssid[] = "Redmi Note 10 5G";              // Your network SSID name here
+const char pass[] = "tanvir1234";                   // Your network password here
+unsigned long timeZone = 6.0;                      // Change this value to your local timezone (in my case +1 for Amsterdam)
 const char* NTPServerName = "nl.pool.ntp.org";    // Change this to a ntpserver nearby, check this site for a list of servers: https://www.pool.ntp.org/en/
-unsigned long intervalNTP = 24 * 60 * 60000;      // Request a new NTP time every 24 hours
+unsigned long intervalNTP = 24 * 60 * 60000;     // Request a new NTP time every 24 hours
+unsigned long updateTimeNTPrequest = 24 * 60 * 60000;     // Request a new NTP time every 24 hours
 
 // Change the colors here if you want.
-// Check for reference: https://github.com/FastLED/FastLED/wiki/Pixel-reference#predefined-colors-list
-// You can also set the colors with RGB values, for example red:
-// CRGB colorHour = CRGB(255, 0, 0);
-CRGB colorHour = CRGB::Red;
-CRGB colorMinute = CRGB::Green;
-CRGB colorSecond = CRGB::Blue;
-CRGB colorHourMinute = CRGB::Yellow;
-CRGB colorHourSecond = CRGB::Magenta;
-CRGB colorMinuteSecond = CRGB::Cyan;
-CRGB colorAll = CRGB::White;
+// Check for reference: https://github.com/FastLED/FastLED/wiki/Pixel-reference#predefined-colors-list or
+// https://www.rapidtables.com/web/color/RGB_Color.html
+// You can also set the colors with RGB values, for example (for red): CRGB(255, 0, 0) or CRGB::Red
+
+CRGB colorHour = CRGB(255, 0, 0);             //Red
+CRGB colorMinute = CRGB(0, 255, 0);           //Green
+CRGB colorSecond = CRGB(0,206,209);           //dark turquoise
+CRGB colorHourMinute = CRGB(255,255,0);       // Yellow
+CRGB colorHourSecond = CRGB(255,0,255);       //Magenta
+CRGB colorMinuteSecond = CRGB(0,255,255);     //Cyan
+CRGB colorAll = CRGB(255,255,255);            //white.
 
 // Set this to true if you want the hour LED to move between hours (if set to false the hour LED will only move every hour)
 #define USE_LED_MOVE_BETWEEN_HOURS true
 
 // Cutoff times for day / night brightness.
-#define USE_NIGHTCUTOFF false   // Enable/Disable night brightness
-#define MORNINGCUTOFF 8         // When does daybrightness begin?   8am
+#define USE_NIGHTCUTOFF true   // Enable/Disable night brightness
+#define MORNINGCUTOFF 7         // When does daybrightness begin?   7am
 #define NIGHTCUTOFF 20          // When does nightbrightness begin? 10pm
-#define NIGHTBRIGHTNESS 20      // Brightness level from 0 (off) to 255 (full brightness)
+#define NIGHTBRIGHTNESS 80      // Brightness level from 0 (off) to 255 (full brightness)
 
 ESP8266WiFiMulti wifiMulti;                     
 WiFiUDP UDP;                                    
@@ -59,7 +60,7 @@ unsigned long prevActualTime = 0;
 #define LEAP_YEAR(Y) ( ((1970+Y)>0) && !((1970+Y)%4) && ( ((1970+Y)%100) || !((1970+Y)%400) ) )
 static const uint8_t monthDays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-#define NUM_LEDS 60     
+#define NUM_LEDS 60
 #define DATA_PIN D5  //Check Data Pin where it is connected..............................
 CRGB LEDs[NUM_LEDS];
 
@@ -114,8 +115,8 @@ void loop() {
     Serial.print("NTP response:\t");
     Serial.println(timeUNIX);
     lastNTPResponse = currentMillis;
-  } else if ((currentMillis - lastNTPResponse) > 3600000) {
-    Serial.println("More than 1 hour since last NTP response. Rebooting.");
+  } else if ((currentMillis - lastNTPResponse) > updateTimeNTPrequest) {       // changes made here.
+    Serial.println("More than 24 hour since last NTP response. Rebooting.");
     Serial.flush();
     ESP.reset();
   }
@@ -127,6 +128,7 @@ void loop() {
 
     for (int i=0; i<NUM_LEDS; i++) 
       LEDs[i] = CRGB::Black;
+
 
     int second = getLEDMinuteOrSecond(currentDateTime.second);
     int minute = getLEDMinuteOrSecond(currentDateTime.minute);
@@ -164,11 +166,14 @@ byte getLEDHour(byte hours, byte minutes) {
   if (hours > 12)
     hours = hours - 12;
 
+// As RGB LED Starts from 1 and for wire convention it starts from 31, so Bellow adjustments needed.
+// Same for getLEDMinuteOrSecond()
   byte hourLED;
   if (hours <= 5) 
-    hourLED = (hours * 5) + 30;
+    hourLED = (hours * 5) + 29;
   else
-    hourLED = (hours * 5) - 30;
+    hourLED = (hours * 5) - 31;
+
 
   if (USE_LED_MOVE_BETWEEN_HOURS == true) {
     if        (minutes >= 12 && minutes < 24) {
@@ -186,10 +191,10 @@ byte getLEDHour(byte hours, byte minutes) {
 }
 
 byte getLEDMinuteOrSecond(byte minuteOrSecond) {
-  if (minuteOrSecond < 30) 
-    return minuteOrSecond + 30;
+  if (minuteOrSecond < 31) 
+    return minuteOrSecond + 29;
   else 
-    return minuteOrSecond - 30;
+    return minuteOrSecond - 31;
 }
 
 void startWiFi() { 
@@ -248,7 +253,7 @@ void convertTime(uint32_t time) {
   // Correct time zone
   time += (3600 * timeZone);
   
-  currentDateTime.second = time % 60;
+  currentDateTime.second = time % 60; 
   currentDateTime.minute = time / 60 % 60;
   currentDateTime.hour   = time / 3600 % 24;
   time  /= 60;  // To minutes
@@ -293,23 +298,30 @@ void convertTime(uint32_t time) {
   }
 
 #ifdef DEBUG_ON
-  Serial.print(currentDateTime.year);
-  Serial.print(" ");
-  Serial.print(currentDateTime.month);
-  Serial.print(" ");
-  Serial.print(currentDateTime.day);
-  Serial.print(" ");
+  Serial.print("Time: ");
   Serial.print(currentDateTime.hour);
-  Serial.print(" ");
+  Serial.print(":");
   Serial.print(currentDateTime.minute);
-  Serial.print(" ");
+  Serial.print(":");
   Serial.print(currentDateTime.second);
+  Serial.print(";");
+
+  Serial.print("Date: ");
+  Serial.print(currentDateTime.day);
+  Serial.print("/");
+  Serial.print(currentDateTime.month);
+  Serial.print("/");
+  Serial.print(currentDateTime.year);
   Serial.print(" day of week: ");
   Serial.print(currentDateTime.dayofweek);
+  Serial.print(";");
+
   Serial.print(" summer time: ");
   Serial.print(summerTime());
+  Serial.print(",");
   Serial.print(" night time: ");
   Serial.print(night());  
+
   Serial.println();
 #endif  
 }
@@ -324,11 +336,8 @@ boolean summerTime() {
   return false;
 }
 
-// I have modified bellow code as it was throwing error, [check original file to see what was changed]
-// Your night function is declared to return a boolean value, but it does not have a return statement if the condition inside 
-// the if statement is not satisfied. In this case, if the condition is false, the function does not explicitly return any value, 
-// which can lead to unexpected behavior.
-// Got this suggestion from ChatGPT.
+// Tanvir have modified bellow code as it was throwing error, [check original file to see what was changed] 
+// which can lead to unexpected behavior. Got this suggestion from ChatGPT.
 boolean night() {
   if (currentDateTime.hour >= NIGHTCUTOFF && currentDateTime.hour <= MORNINGCUTOFF) {
     return true;
