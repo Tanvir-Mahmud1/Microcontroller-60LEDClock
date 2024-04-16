@@ -15,12 +15,12 @@
 #include <FastLED.h>
 #define DEBUG_ON
 
-const char ssid[] = "Redmi Note 10 5G";                // Your network SSID name here
-const char pass[] = "tanvir1234";                      // Your network password here
-unsigned long timeZone = 6.0;                          // Change this value to your local timezone (in my case +1 for Amsterdam)
+const char ssid[] = "🌼 Aparajita 🌼";                // Your network SSID name here
+const char pass[] = "b2nn@321";                        // Your network password here
+unsigned long timeZone = 5.0;                          // Change this value to your local timezone (in my case +1 for Amsterdam)
 const char* NTPServerName = "nl.pool.ntp.org";         // Change this to a ntpserver nearby, check this site for a list of servers: https://www.pool.ntp.org/en/
 unsigned long intervalNTP = 24 * 60 * 60000;           // Request a new NTP time every 24 hours
-unsigned long updateTimeNTPrequest = 12 * 60 * 60000;  // Request a new NTP time every ** hours
+unsigned long updateTimeNTPrequest = 4 * 60 * 60000;   // Request a new NTP time every ** hours
 
 // Change the colors here if you want.
 // Check for reference: https://github.com/FastLED/FastLED/wiki/Pixel-reference#predefined-colors-list or
@@ -32,7 +32,7 @@ CRGB colorMinute = CRGB(0, 255, 0);          //Green
 CRGB colorSecond = CRGB(0, 206, 209);        //dark turquoise
 CRGB colorHourMinute = CRGB(255, 255, 0);    // Yellow
 CRGB colorHourSecond = CRGB(255, 0, 255);    //Magenta
-CRGB colorMinuteSecond = CRGB(0, 255, 255);  //Cyan
+CRGB colorMinuteSecond = CRGB(0, 0, 255);    //Blue
 CRGB colorAll = CRGB(255, 255, 255);         //white.
 
 // Set this to true if you want the hour LED to move between hours (if set to false the hour LED will only move every hour)
@@ -40,9 +40,9 @@ CRGB colorAll = CRGB(255, 255, 255);         //white.
 
 // Cutoff times for day / night brightness.
 #define USE_NIGHTCUTOFF true  // Enable/Disable night brightness
-#define MORNINGCUTOFF 7       // When does daybrightness begin?   7am
-#define NIGHTCUTOFF 20        // When does nightbrightness begin? 10pm
-#define NIGHTBRIGHTNESS 100    // Brightness level from 0 (off) to 255 (full brightness)
+#define MORNINGCUTOFF 6       // When does daybrightness begin?   6 am
+#define NIGHTCUTOFF 22        // When does nightbrightness begin? 10 pm
+#define NIGHTBRIGHTNESS 10    // Brightness level from 0 (off) to 255 (full brightness)
 
 ESP8266WiFiMulti wifiMulti;
 WiFiUDP UDP;
@@ -94,27 +94,38 @@ void setup() {
   Serial.print("Time server IP:\t");
   Serial.println(timeServerIP);
 
-  Serial.println("\r\nSending NTP request ...");
+  Serial.println("\r\nSending NTP request [in void setup()]...");
   sendNTPpacket(timeServerIP);
+
+// Bellow code is Generaed by Tanvir. [NTP respond was not getting everytime it request, so bellow code will loop through it until it gets response.]
+  uint32_t time = getTime();
+  while (time == 0) {
+    sendNTPpacket(timeServerIP);
+    time = getTime();  // Check if an NTP response has arrived and get the (UNIX) time
+    Serial.println("\r\nNo Response from NTP server. So, Sending NTP request again ...");
+    delay(2000);
+  } 
+
 }
 
 void loop() {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - prevNTP > intervalNTP) {  // If a minute has passed since last NTP request
+  if (currentMillis - prevNTP > intervalNTP) {  // If 24 hours has passed since last NTP request
     prevNTP = currentMillis;
-    Serial.println("\r\nSending NTP request ...");
+    Serial.println("\r\nSending NTP request [in void loop()] ...");
     sendNTPpacket(timeServerIP);  // Send an NTP request
   }
 
   uint32_t time = getTime();  // Check if an NTP response has arrived and get the (UNIX) time
+
   if (time) {                 // If a new timestamp has been received
     timeUNIX = time;
-    Serial.print("NTP response:\t");
+    Serial.print("\r\nNTP response:\t");
     Serial.println(timeUNIX);
     lastNTPResponse = currentMillis;
   } else if ((currentMillis - lastNTPResponse) > updateTimeNTPrequest) {
-    Serial.println("More than ** hour since last NTP response. Rebooting.");
+    Serial.println("\r\nMore than ** hour since last NTP response. Rebooting ...");
     Serial.flush();
     ESP.reset();
   }
@@ -344,7 +355,8 @@ boolean summerTime() {
 // Tanvir have modified bellow code as it was throwing error, [check original file to see what was changed]
 // which can lead to unexpected behavior. Got this suggestion from ChatGPT.
 boolean night() {
-  if (currentDateTime.hour >= NIGHTCUTOFF && currentDateTime.hour <= MORNINGCUTOFF) {
+  if (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour <= MORNINGCUTOFF) {
+//  Tanvir modified above code from logical AND to Logical OR.
     return true;
   }
   return false;
