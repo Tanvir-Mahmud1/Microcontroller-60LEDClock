@@ -29,10 +29,10 @@ unsigned long updateTimeNTPrequest = 4 * 60 * 60000;   // Request a new NTP time
 
 CRGB colorHour = CRGB(255, 0, 0);            //Red
 CRGB colorMinute = CRGB(0, 255, 0);          //Green
-CRGB colorSecond = CRGB(0, 206, 209);        //dark turquoise
+CRGB colorSecond = CRGB(0, 80, 80);        //dark turquoise
 CRGB colorHourMinute = CRGB(255, 255, 0);    // Yellow
 CRGB colorHourSecond = CRGB(255, 0, 255);    //Magenta
-CRGB colorMinuteSecond = CRGB(0, 0, 255);    //Blue
+CRGB colorMinuteSecond = CRGB(0, 0, 255);    //Blud
 CRGB colorAll = CRGB(255, 255, 255);         //white.
 
 // Set this to true if you want the hour LED to move between hours (if set to false the hour LED will only move every hour)
@@ -94,7 +94,7 @@ void setup() {
   Serial.print("Time server IP:\t");
   Serial.println(timeServerIP);
 
-  Serial.println("\r\nSending NTP request [in void setup()]...");
+  Serial.println("\r\nSending NTP request from void setup()...");
   sendNTPpacket(timeServerIP);
 
 // Bellow code is Generaed by Tanvir. [NTP respond was not getting everytime it request, so bellow code will loop through it until it gets response.]
@@ -113,7 +113,7 @@ void loop() {
 
   if (currentMillis - prevNTP > intervalNTP) {  // If 24 hours has passed since last NTP request
     prevNTP = currentMillis;
-    Serial.println("\r\nSending NTP request [in void loop()] ...");
+    Serial.println("\r\nSending NTP request from void loop()...");
     sendNTPpacket(timeServerIP);  // Send an NTP request
   }
 
@@ -166,6 +166,9 @@ void loop() {
 
     if (night() && USE_NIGHTCUTOFF == true)
       FastLED.setBrightness(NIGHTBRIGHTNESS);
+      // Bellow code is modified by Tanvir.
+    else
+      FastLED.setBrightness(255);
 
     FastLED.show();
   }
@@ -355,16 +358,15 @@ boolean summerTime() {
 // Tanvir have modified bellow code as it was throwing error, [check original file to see what was changed]
 // which can lead to unexpected behavior. Got this suggestion from ChatGPT.
 boolean night() {
-  if (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour <= MORNINGCUTOFF) {
-//  Tanvir modified above code from logical AND to Logical OR.
-    return true;
-  }
-  return false;
+  if (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour < MORNINGCUTOFF) return true;
+  //  Tanvir modified above code from logical AND to Logical OR.
+  else
+    return false;
 }
 
 // Or you can simplify the function by directly returning the result of the condition:
 // boolean night() {
-//   return (currentDateTime.hour >= NIGHTCUTOFF && currentDateTime.hour <= MORNINGCUTOFF);
+//   return (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour < MORNINGCUTOFF);
 // }
 
 
