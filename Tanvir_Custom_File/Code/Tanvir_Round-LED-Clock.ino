@@ -2,11 +2,7 @@
   WiFi connected round LED Clock. It gets NTP time from the internet and translates to a 60 RGB WS2812B LED strip. 
   NTP and summer time code based on:
   https://tttapa.github.io/ESP8266/Chap15%20-%20NTP.html 
-  https://github.com/SensorsIot/NTPtimeESP/blob/master/NTPtimeESP.cpp (for US summer time support check this link)  
-
-  Customized code on line [20-22, 25, 45, 47, 64, 118, 173, 175, 194, 195, 197, 301-326, 339-]
-  May varry if i added lines or deleted lines.
-  
+  https://github.com/SensorsIot/NTPtimeESP/blob/master/NTPtimeESP.cpp (for US summer time support check this link)
 */
 
 #include <ESP8266WiFi.h>
@@ -22,23 +18,22 @@ const char* NTPServerName = "nl.pool.ntp.org";         // Change this to a ntpse
 unsigned long intervalNTP = 24 * 60 * 60000;           // Request a new NTP time every 24 hours
 unsigned long updateTimeNTPrequest = 4 * 60 * 60000;   // Request a new NTP time every ** hours
 
-// Change the colors here if you want.
-// Check for reference: https://github.com/FastLED/FastLED/wiki/Pixel-reference#predefined-colors-list or
-// https://www.rapidtables.com/web/color/RGB_Color.html
-// You can also set the colors with RGB values, for example (for red): CRGB(255, 0, 0) or CRGB::Red
+/*
+Change the colors here if you want, reference: https://github.com/FastLED/FastLED/wiki/Pixel-reference#predefined-colors-list or https://www.rapidtables.com/web/color/RGB_Color.html
+You can also set the colors with RGB values, for example (for red): CRGB(255, 0, 0) or CRGB::Red
+*/
 
 CRGB colorHour = CRGB(255, 0, 0);            //Red
 CRGB colorMinute = CRGB(0, 255, 0);          //Green
-CRGB colorSecond = CRGB(0, 80, 80);        //dark turquoise
-CRGB colorHourMinute = CRGB(255, 255, 0);    // Yellow
+CRGB colorSecond = CRGB(0, 80, 80);          //dark turquoise
+CRGB colorHourMinute = CRGB(255, 255, 0);    //Yellow
 CRGB colorHourSecond = CRGB(255, 0, 255);    //Magenta
-CRGB colorMinuteSecond = CRGB(0, 0, 255);    //Blud
+CRGB colorMinuteSecond = CRGB(0, 0, 255);    //Blue
 CRGB colorAll = CRGB(255, 255, 255);         //white.
 
 // Set this to true if you want the hour LED to move between hours (if set to false the hour LED will only move every hour)
 #define USE_LED_MOVE_BETWEEN_HOURS true
 
-// Cutoff times for day / night brightness.
 #define USE_NIGHTCUTOFF true  // Enable/Disable night brightness
 #define MORNINGCUTOFF 6       // When does daybrightness begin?   6 am
 #define NIGHTCUTOFF 22        // When does nightbrightness begin? 10 pm
@@ -74,6 +69,7 @@ struct DateTime {
 
 DateTime currentDateTime;
 
+// ___________________________________________________________________________________________________
 void setup() {
 
   FastLED.delay(3000);
@@ -102,18 +98,18 @@ void setup() {
   while (time == 0) {
     sendNTPpacket(timeServerIP);
     time = getTime();  // Check if an NTP response has arrived and get the (UNIX) time
-    Serial.println("\r\nNo Response from NTP server. So, Sending NTP request again ...");
+    Serial.println("\r\nNo Response from NTP server. So, Sending NTP request again from void setup() but in loop...");
     delay(2000);
   } 
-
 }
+
 
 void loop() {
   unsigned long currentMillis = millis();
 
   if (currentMillis - prevNTP > intervalNTP) {  // If 24 hours has passed since last NTP request
     prevNTP = currentMillis;
-    Serial.println("\r\nSending NTP request from void loop()...");
+    Serial.println("\r\nSending NTP request from void loop() after 'intervalNTP'...");
     sendNTPpacket(timeServerIP);  // Send an NTP request
   }
 
@@ -148,67 +144,52 @@ void loop() {
     LEDs[minute] = colorMinute;
     LEDs[hour] = colorHour;
 
-    // Hour and min are on same spot
-    if (hour == minute)
+    if (hour == minute)         //If Hour and min are on same spot.
       LEDs[hour] = colorHourMinute;
 
-    // Hour and sec are on same spot
-    if (hour == second)
+    if (hour == second)         //If Hour and sec are on same spot.
       LEDs[hour] = colorHourSecond;
 
-    // Min and sec are on same spot
-    if (minute == second)
+    if (minute == second)       // Min and sec are on same spot.
       LEDs[minute] = colorMinuteSecond;
 
-    // All are on same spot
-    if (minute == second && minute == hour)
+    if (minute == second && minute == hour) // Hour-Min-Sec are on same spot.
       LEDs[minute] = colorAll;
+
 
     if (night() && USE_NIGHTCUTOFF == true)
       FastLED.setBrightness(NIGHTBRIGHTNESS);
-      // Bellow code is modified by Tanvir.
-    else
-      FastLED.setBrightness(255);
-
+    else FastLED.setBrightness(255);    // This code is modified by Tanvir.
+      
     FastLED.show();
   }
 }
+// ___________________________________________________________________________________________________
+
 
 byte getLEDHour(byte hours, byte minutes) {
-  if (hours > 12)
-    hours = hours - 12;
-
-  // As RGB LED Starts from 0 but LED stripe starts from 1, so Bellow adjustments needed to work 60th 1st and 2nd LED.
-  // Same for getLEDMinuteOrSecond()
+  if (hours > 12)   hours = hours - 12;
+    
+  // As RGB LED Starts from 0 but LED stripe starts from 1, so Bellow adjustments needed to work 60th 1st and 2nd LED. And Same for getLEDMinuteOrSecond(). 
   byte hourLED;
-  if (hours <= 6)
-    hourLED = (hours * 5) + 30;
-  else
-    hourLED = (hours * 5) - 30;
-
+  if (hours <= 6) hourLED = (hours * 5) + 30;
+  else hourLED = (hours * 5) - 30;
 
   if (USE_LED_MOVE_BETWEEN_HOURS == true) {
-    if (minutes >= 12 && minutes < 24) {
-      hourLED += 1;
-    } else if (minutes >= 24 && minutes < 36) {
-      hourLED += 2;
-    } else if (minutes >= 36 && minutes < 48) {
-      hourLED += 3;
-    } else if (minutes >= 48) {
-      hourLED += 4;
-    }
+    if (minutes >= 12 && minutes < 24) hourLED += 1;
+    else if (minutes >= 24 && minutes < 36) hourLED += 2;
+    else if (minutes >= 36 && minutes < 48) hourLED += 3;
+    else if (minutes >= 48) hourLED += 4;
   }
-  if (hourLED > 60)
-    hourLED -= 60;      // This line is needed to work 1-4 th LED to work when its 6:12 to 6:59.
+
+  if (hourLED > 60) hourLED -= 60;      // This line is needed to work (1-4)th LED to work when its 6:12 to 6:59.
 
   return hourLED - 1;   // for (int i = 0; i < NUM_LEDS; i++), So i need to make some adjustment here.
 }
 
 byte getLEDMinuteOrSecond(byte minuteOrSecond) {
-  if (minuteOrSecond < 31)
-    return minuteOrSecond + 29;
-  else
-    return minuteOrSecond - 31;
+  if (minuteOrSecond < 31)  return minuteOrSecond + 29;
+  else  return minuteOrSecond - 31;
 }
 
 void startWiFi() {
@@ -269,8 +250,7 @@ void sendNTPpacket(IPAddress& address) {
 }
 
 void convertTime(uint32_t time) {
-  // Correct time zone
-  time += (3600 * timeZone);
+  time += (3600 * timeZone);    // Correct time zone
 
   currentDateTime.second = time % 60;
   currentDateTime.minute = time / 60 % 60;
@@ -291,30 +271,20 @@ void convertTime(uint32_t time) {
   byte monthLength = 0;
   for (month = 0; month < 12; month++) {
     if (month == 1) {  // February
-      if (LEAP_YEAR(year)) {
-        monthLength = 29;
-      } else {
-        monthLength = 28;
-      }
-    } else {
-      monthLength = monthDays[month];
-    }
+      if (LEAP_YEAR(year)) monthLength = 29;
+      else monthLength = 28;
 
-    if (time >= monthLength) {
-      time -= monthLength;
-    } else {
-      break;
-    }
+    } else monthLength = monthDays[month];
+
+    if (time >= monthLength) time -= monthLength;
+    else break;
   }
 
   currentDateTime.day = time + 1;
   currentDateTime.year = year + 1970;
   currentDateTime.month = month + 1;
 
-  // Correct European Summer time
-  if (summerTime()) {
-    currentDateTime.hour += 1;
-  }
+  if (summerTime()) currentDateTime.hour += 1;        // Correct European Summer time
 
 #ifdef DEBUG_ON
   Serial.print("Time: ");
@@ -338,15 +308,15 @@ void convertTime(uint32_t time) {
   Serial.print("; Night time: ");
   Serial.print(night());
 
-  // Serial.print("; HourLED: ");
-  // Serial.print(getLEDHour(currentDateTime.hour, currentDateTime.minute));    // These lines are for Checking the HourLED's LED No., just for Debugging.
+  // Serial.print("; Second indicating LED: ");
+  // Serial.print(getLEDMinuteOrSecond(currentDateTime.second););    // These lines are for Checking the SecondLED's LED No., just for Debugging.
 
   Serial.println();
 #endif
 }
 
-boolean summerTime() {
 
+boolean summerTime() {
   if (currentDateTime.month < 3 || currentDateTime.month > 10) return false;  // No summer time in Jan, Feb, Nov, Dec
   if (currentDateTime.month > 3 && currentDateTime.month < 10) return true;   // Summer time in Apr, May, Jun, Jul, Aug, Sep
   if (currentDateTime.month == 3 && (currentDateTime.hour + 24 * currentDateTime.day) >= (3 + 24 * (31 - (5 * currentDateTime.year / 4 + 4) % 7)) || currentDateTime.month == 10 && (currentDateTime.hour + 24 * currentDateTime.day) < (3 + 24 * (31 - (5 * currentDateTime.year / 4 + 1) % 7)))
@@ -355,31 +325,23 @@ boolean summerTime() {
     return false;
 }
 
+
 // Tanvir have modified bellow code as it was throwing error, [check original file to see what was changed]
-// which can lead to unexpected behavior. Got this suggestion from ChatGPT.
 boolean night() {
-  if (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour < MORNINGCUTOFF) return true;
-  //  Tanvir modified above code from logical AND to Logical OR.
-  else
-    return false;
+  if (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour < MORNINGCUTOFF) return true;   //  Tanvir modified above code from logical AND to Logical OR.
+  else  return false;
 }
 
-// Or you can simplify the function by directly returning the result of the condition:
-// boolean night() {
-//   return (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour < MORNINGCUTOFF);
-// }
 
+//__________________________________________________________________________________________________________________
+//  Code generated by Tanvir.
 
-/*__________________________________________________________________________________________________________________
- Code generated by Tanvir.
-*/
 
 void random_color_show() {
   // Fill the LED array with random colors
   for (int i = 0; i < NUM_LEDS; i++) {
-    if (i == 0) {
-      LEDs[i] = randomColor();
-    } else {
+    if (i == 0) LEDs[i] = randomColor();
+    else {
       CRGB newColor = randomColor();
       while (abs(newColor.r - LEDs[i-1].r) < 50 && abs(newColor.g - LEDs[i-1].g) < 50 && abs(newColor.b - LEDs[i-1].b) < 50) {
         newColor = randomColor();
@@ -387,8 +349,7 @@ void random_color_show() {
       LEDs[i] = newColor;
     }
   }
-  // Display the updated LED array
-  FastLED.show();
+  FastLED.show();   // Display the updated LED array
 }
 
 // Function to generate a random CRGB color.
