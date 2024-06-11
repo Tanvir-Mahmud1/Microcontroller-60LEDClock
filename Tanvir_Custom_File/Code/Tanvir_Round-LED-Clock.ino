@@ -12,7 +12,7 @@
 #define DEBUG_ON
 
 const char ssid[] = "🌼 Aparajita 🌼";                // Your network SSID name here
-const char pass[] = "b2nn@3210";                        // Your network password here
+const char pass[] = "b2nn@321";                        // Your network password here
 unsigned long timeZone = 5.0;                          // Change this value to your local timezone (in my case +1 for Amsterdam)
 const char* NTPServerName = "nl.pool.ntp.org";         // Change this to a ntpserver nearby, check this site for a list of servers: https://www.pool.ntp.org/en/
 unsigned long intervalNTP = 24 * 60 * 60000;           // Request a new NTP time every 24 hours
@@ -156,11 +156,7 @@ void loop() {
     if (minute == second && minute == hour) // Hour-Min-Sec are on same spot.
       LEDs[minute] = colorAll;
 
-
-    if (night() && USE_NIGHTCUTOFF == true)
-      FastLED.setBrightness(NIGHTBRIGHTNESS);
-    else FastLED.setBrightness(255);    // This code is modified by Tanvir.
-      
+    set_night_brightness();
     FastLED.show();
   }
 }
@@ -298,12 +294,14 @@ void convertTime(uint32_t time) {
   Serial.print(currentDateTime.month);
   Serial.print("/");
   Serial.print(currentDateTime.year);
-  Serial.print("; Day of week: ");
-  Serial.print(currentDateTime.dayofweek+1);
+  Serial.print("; Day_of_week: ");
+  
+  Serial.print(getDayName(currentDateTime.dayofweek+1));  // getDayName() function will convert number to name which takes 1 argument "currentDateTime.dayofweek+1"
+  // Serial.print(currentDateTime.dayofweek+1);
 
-  Serial.print("; Summer time: ");
+  Serial.print("; Summer_time: ");
   Serial.print(summerTime());
-  Serial.print("; Night time: ");
+  Serial.print("; Night_time: ");
   Serial.print(night());
 
   // Serial.print("; Second indicating LED: ");
@@ -342,7 +340,35 @@ void random_color_show() {
     
     LEDs[i] = newColor;
     // Serial.printf("R: %d, G: %d, B: %d\n", LEDs[i].r, LEDs[i].g, LEDs[i].b);    // This line is used for seing the RGB values in the serial monitor.
-
+    set_night_brightness();
     FastLED.show();   // Display the updated LED array, This line must be here, if we use it outside for loop it only changes 1st LED.
   }
 }
+
+
+void set_night_brightness() {
+  if (night() && USE_NIGHTCUTOFF == true)
+    FastLED.setBrightness(NIGHTBRIGHTNESS);
+  else FastLED.setBrightness(255);
+}
+
+
+String getDayName(int day) {
+  switch(day) {
+    case 1: return "Saturday";
+    case 2: return "Sunday";
+    case 3: return "Monday";
+    case 4: return "Tuesday";
+    case 5: return "Wednesday";
+    case 6: return "Thursday";
+    case 7: return "Friday";
+    default:  return "Invalid day";
+  }
+}
+
+
+
+
+
+
+
