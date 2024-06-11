@@ -12,7 +12,7 @@
 #define DEBUG_ON
 
 const char ssid[] = "🌼 Aparajita 🌼";                // Your network SSID name here
-const char pass[] = "b2nn@321";                        // Your network password here
+const char pass[] = "b2nn@3210";                        // Your network password here
 unsigned long timeZone = 5.0;                          // Change this value to your local timezone (in my case +1 for Amsterdam)
 const char* NTPServerName = "nl.pool.ntp.org";         // Change this to a ntpserver nearby, check this site for a list of servers: https://www.pool.ntp.org/en/
 unsigned long intervalNTP = 24 * 60 * 60000;           // Request a new NTP time every 24 hours
@@ -194,11 +194,9 @@ byte getLEDMinuteOrSecond(byte minuteOrSecond) {
 
 void startWiFi() {
   wifiMulti.addAP(ssid, pass);
-
   Serial.println("Connecting");
-  byte i = 0;
+
   while (wifiMulti.run() != WL_CONNECTED) {
-    delay(250);
     Serial.print('.');
 
     // Bellow code is for displaying random color while device is not connected to the internet/NTP Server. Customized by Tanvir.
@@ -321,8 +319,7 @@ boolean summerTime() {
   if (currentDateTime.month > 3 && currentDateTime.month < 10) return true;   // Summer time in Apr, May, Jun, Jul, Aug, Sep
   if (currentDateTime.month == 3 && (currentDateTime.hour + 24 * currentDateTime.day) >= (3 + 24 * (31 - (5 * currentDateTime.year / 4 + 4) % 7)) || currentDateTime.month == 10 && (currentDateTime.hour + 24 * currentDateTime.day) < (3 + 24 * (31 - (5 * currentDateTime.year / 4 + 1) % 7)))
     return true;
-  else
-    return false;
+  else  return false;
 }
 
 
@@ -338,21 +335,14 @@ boolean night() {
 
 
 void random_color_show() {
-  // Fill the LED array with random colors
-  for (int i = 0; i < NUM_LEDS; i++) {
-    if (i == 0) LEDs[i] = randomColor();
-    else {
-      CRGB newColor = randomColor();
-      while (abs(newColor.r - LEDs[i-1].r) < 50 && abs(newColor.g - LEDs[i-1].g) < 50 && abs(newColor.b - LEDs[i-1].b) < 50) {
-        newColor = randomColor();
-      }
-      LEDs[i] = newColor;
-    }
-  }
-  FastLED.show();   // Display the updated LED array
-}
+  for (int i = 0; i < NUM_LEDS; i++) {    // Fill the LED array with random colors.
+    CRGB newColor;   // Here "newColor" is a CRGB variable.
+    do newColor = CRGB(random(256), random(256), random(256));
+      while (i > 0 && abs(newColor.r - LEDs[i-1].r) < 50 && abs(newColor.g - LEDs[i-1].g) < 50 && abs(newColor.b - LEDs[i-1].b) < 50);
+    
+    LEDs[i] = newColor;
+    // Serial.printf("R: %d, G: %d, B: %d\n", LEDs[i].r, LEDs[i].g, LEDs[i].b);    // This line is used for seing the RGB values in the serial monitor.
 
-// Function to generate a random CRGB color.
-CRGB randomColor() {
-  return CRGB(random(256), random(256), random(256));
+    FastLED.show();   // Display the updated LED array, This line must be here, if we use it outside for loop it only changes 1st LED.
+  }
 }
