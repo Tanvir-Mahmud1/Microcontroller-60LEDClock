@@ -13,10 +13,10 @@
 
 const char ssid[] = "🌼 Aparajita 🌼";                // Your network SSID name here
 const char pass[] = "b2nn@321";                        // Your network password here
-unsigned long timeZone = 5.0;                          // Change this value to your local timezone (in my case +1 for Amsterdam)
-const char* NTPServerName = "nl.pool.ntp.org";         // Change this to a ntpserver nearby, check this site for a list of servers: https://www.pool.ntp.org/en/
+unsigned long timeZone = 5.0;                          // Change this value to your local timezone (in my case +6 for Dhaka.)
+const char* NTPServerName = "0.pool.ntp.org";          // Changed from "nl.pool.ntp.org" to "0.pool.ntp.org". Check this site for a list of servers: https://www.pool.ntp.org/en/
 unsigned long intervalNTP = 24 * 60 * 60000;           // Request a new NTP time every 24 hours
-unsigned long updateTimeNTPrequest = 4 * 60 * 60000;   // Request a new NTP time every ** hours
+unsigned long updateTimeNTPrequest = 6 * 60 * 60000;   // Request a new NTP time every ** hours
 
 /*
 Change the colors here if you want, reference: https://github.com/FastLED/FastLED/wiki/Pixel-reference#predefined-colors-list or https://www.rapidtables.com/web/color/RGB_Color.html
@@ -25,10 +25,10 @@ You can also set the colors with RGB values, for example (for red): CRGB(255, 0,
 
 CRGB colorHour = CRGB(255, 0, 0);            //Red
 CRGB colorMinute = CRGB(0, 255, 0);          //Green
-CRGB colorSecond = CRGB(0, 80, 80);          //dark turquoise
+CRGB colorSecond = CRGB(0, 0, 50);           //dim Blue
 CRGB colorHourMinute = CRGB(255, 255, 0);    //Yellow
 CRGB colorHourSecond = CRGB(255, 0, 255);    //Magenta
-CRGB colorMinuteSecond = CRGB(0, 0, 255);    //Blue
+CRGB colorMinuteSecond = CRGB(0, 255, 255);  //Cyan
 CRGB colorAll = CRGB(255, 255, 255);         //white.
 
 // Set this to true if you want the hour LED to move between hours (if set to false the hour LED will only move every hour)
@@ -99,6 +99,7 @@ void setup() {
     sendNTPpacket(timeServerIP);
     time = getTime();  // Check if an NTP response has arrived and get the (UNIX) time
     Serial.println("\r\nNo Response from NTP server. So, Sending NTP request again from void setup() but in loop...");
+    circular_led_show();    // Will show circular led while not connectec.
     delay(2000);
   } 
 }
@@ -198,9 +199,6 @@ void startWiFi() {
     // Bellow code is for displaying random color while device is not connected to the internet/NTP Server. Customized by Tanvir.
     circular_led_show();
     // random_color_show();
-
-    // LEDs[i++] = CRGB::Green;
-    // FastLED.show();
   }
   
   Serial.println("\r\n");
@@ -245,8 +243,8 @@ void sendNTPpacket(IPAddress& address) {
 }
 
 void convertTime(uint32_t time) {
-  time += (3600 * timeZone);    // Correct time zone
-
+  time += (3600 * timeZone + 3);     // Here Time adjusted with time zone. [3600 sec x timezone(5 Hour)] added to time. And * additional sec for accuracy.
+                                     // As NTP response time is * sec slow with "https://time.is/UTC" and ohter servers so added * addition sec here.
   currentDateTime.second = time % 60;
   currentDateTime.minute = time / 60 % 60;
   currentDateTime.hour = time / 3600 % 24;
