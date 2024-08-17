@@ -25,7 +25,7 @@ You can also set the colors with RGB values, for example (for red): CRGB(255, 0,
 
 CRGB colorHour = CRGB(255, 0, 0);            //Red
 CRGB colorMinute = CRGB(0, 255, 0);          //Green
-CRGB colorSecond = CRGB(0, 0, 50);           //dim Blue
+CRGB colorSecond = CRGB(0, 0, 30);           //dim Blue
 CRGB colorHourMinute = CRGB(255, 255, 0);    //Yellow
 CRGB colorHourSecond = CRGB(255, 0, 255);    //Magenta
 CRGB colorMinuteSecond = CRGB(0, 255, 255);  //Cyan
@@ -36,7 +36,7 @@ CRGB colorAll = CRGB(255, 255, 255);         //white.
 
 #define USE_NIGHTCUTOFF true  // Enable/Disable night brightness
 #define MORNINGCUTOFF 6       // When does daybrightness begin?   6 am
-#define NIGHTCUTOFF 23        // When does nightbrightness begin? 10 pm
+#define NIGHTCUTOFF 23        // When does nightbrightness begin? 11 pm
 #define NIGHTBRIGHTNESS 10    // Brightness level from 0 (off) to 255 (full brightness)
 
 ESP8266WiFiMulti wifiMulti;
@@ -83,7 +83,10 @@ void setup() {
   startUDP();
 
   if (!WiFi.hostByName(NTPServerName, timeServerIP)) {
-    Serial.println("DNS lookup failed. Rebooting.");
+    Serial.println("Can't connect to internet. After a delay it will Reboot the system.");
+    circular_led_show();      // Will show circular led while no internet connectivity.
+    delay(300000);            // Delay for ** seconds befor reseting the board.
+    Serial.println("DNS lookup failed. Rebooting...");
     Serial.flush();
     ESP.reset();
   }
@@ -99,7 +102,7 @@ void setup() {
     sendNTPpacket(timeServerIP);
     time = getTime();  // Check if an NTP response has arrived and get the (UNIX) time
     Serial.println("\r\nNo Response from NTP server. So, Sending NTP request again from void setup() but in loop...");
-    circular_led_show();    // Will show circular led while not connectec.
+    circular_led_show();    // Will show circular led while not connected.
     delay(2000);
   } 
 }
@@ -191,7 +194,7 @@ byte getLEDMinuteOrSecond(byte minuteOrSecond) {
 
 void startWiFi() {
   wifiMulti.addAP(ssid, pass);
-  Serial.println("Connecting");
+  Serial.println("Connecting to Wifi...");
 
   while (wifiMulti.run() != WL_CONNECTED) {
     Serial.print('.');
@@ -347,7 +350,7 @@ String getDayName(int daysNumber) {
     case 6: return "Thursday";
     case 7: return "Friday";
     case 8: return "Saturday";
-    default:  return "Invalid day";
+    default: return "Invalid day";
   }
 }
 
