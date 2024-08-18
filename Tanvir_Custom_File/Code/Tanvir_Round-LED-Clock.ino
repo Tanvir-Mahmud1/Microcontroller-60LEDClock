@@ -3,10 +3,13 @@
   NTP and summer time code based on:
   https://tttapa.github.io/ESP8266/Chap15%20-%20NTP.html 
   https://github.com/SensorsIot/NTPtimeESP/blob/master/NTPtimeESP.cpp (for US summer time support check this link)
+  Board Name = WEMOS LOLIN32 Lite
 */
 
-#include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
+// #include <ESP8266WiFi.h>
+#include <WiFi.h>
+// #include <ESP8266WiFiMulti.h>
+#include <WiFiMulti.h>
 #include <WiFiUdp.h>
 #include <FastLED.h>
 #define DEBUG_ON
@@ -39,7 +42,8 @@ CRGB colorAll = CRGB(255, 255, 255);         //white.
 #define NIGHTCUTOFF 23        // When does nightbrightness begin? 11 pm
 #define NIGHTBRIGHTNESS 10    // Brightness level from 0 (off) to 255 (full brightness)
 
-ESP8266WiFiMulti wifiMulti;
+// ESP8266WiFiMulti wifiMulti;
+WiFiMulti wifiMulti;
 WiFiUDP UDP;
 IPAddress timeServerIP;
 const int NTP_PACKET_SIZE = 48;
@@ -54,15 +58,23 @@ unsigned long prevActualTime = 0;
 static const uint8_t monthDays[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 #define NUM_LEDS 60
-#define DATA_PIN D5  //Check Data Pin where it is connected..............................
+#define DATA_PIN 18  //Check Data Pin where it is connected...............................
 CRGB LEDs[NUM_LEDS];
 
 // Below code is for Hour Notification sound, Developed by Tanvir.------------------------(1)
-#include <SoftwareSerial.h>
+// ESP32 boards like the Wemos D1 Mini ESP32 do not support SoftwareSerial in the same way as the ESP8266 or Arduino Uno.
+// Instead of using SoftwareSerial, you can use the hardware UART ports available on the ESP32.
+// ESP32 boards typically have multiple UART ports (Serial, Serial1, Serial2, etc.). 
+// using Serial2 (UART2) for communication with the DFPlayer Mini:
+// #include <SoftwareSerial.h>    No need this line.
 #include <DFRobotDFPlayerMini.h>
 
-SoftwareSerial mySoftwareSerial(D2, D3); // RX, TX respectively, [connect RX pin to dfPlayer's TX pin and TX pin to dfPlayer's RX pin]
+// SoftwareSerial mySoftwareSerial(16, 17); // RX, TX respectively, [connect RX pin to dfPlayer's TX pin and TX pin to dfPlayer's RX pin]
+HardwareSerial hard_Serial(2); // Use Serial2 (UART2)
 DFRobotDFPlayerMini myDFPlayer;
+
+#define UART_RX_PIN 16       //Check Data Pin where it is connected...............................
+#define UART_TX_PIN 17
 
 int set_min_for_alrm = 0;  // This line is for demo purpose, we can remove this line and set the value diretly in playAlarm() function.
 // ---------------------------------------------------------------------------------------(1)
@@ -91,7 +103,7 @@ void setup() {
   Serial.println("\r\n");
 
   // setupDFPlayer_soft();    // Initialize DFPlayer Mini------------------------------(2)
-  // setupDFPlayer_hard();
+  setupDFPlayer_hard();
 
 
   startWiFi();
@@ -103,7 +115,8 @@ void setup() {
     delay(300000);            // Delay for ** seconds befor reseting the board.
     Serial.println("DNS lookup failed. Rebooting...");
     Serial.flush();
-    ESP.reset();
+    // ESP.reset();
+    ESP.restart();
   }
   Serial.print("Time server IP:\t");
   Serial.println(timeServerIP);
@@ -125,7 +138,7 @@ void setup() {
 
 void loop() {
 
-  // playAlarm();  //   -----------------------------------------------------------------------(3)
+  playAlarm();  //   -----------------------------------------------------------------------(3)
 
   unsigned long currentMillis = millis();
 
@@ -145,7 +158,8 @@ void loop() {
   } else if ((currentMillis - lastNTPResponse) > updateTimeNTPrequest) {
     Serial.println("\r\nMore than ** hour since last NTP response. Rebooting ...");
     Serial.flush();
-    ESP.reset();
+    // ESP.reset();
+    ESP.restart();
   }
 
   uint32_t actualTime = timeUNIX + (currentMillis - lastNTPResponse) / 1000;
@@ -234,7 +248,8 @@ void startUDP() {
   Serial.println("Starting UDP");
   UDP.begin(123);  // Start listening for UDP messages on port 123
   Serial.print("Local port:\t");
-  Serial.println(UDP.localPort());
+  // Serial.println(UDP.localPort());
+  Serial.println(123);
   Serial.println();
 }
 
@@ -402,7 +417,7 @@ void random_color_show() {
 
 
 // Below code is for Hour Notification sound, Developed by Tanvir.-------------------------------------(4)
-// /*
+/*
 void setupDFPlayer_soft()  { 
   // This is software serial communication setup. [Check the software and hardware serial communication difference online/chatGPT]
   mySoftwareSerial.begin(9600);       // Begin software serial communication, to communicate with dfPlayer Mini.
@@ -419,31 +434,31 @@ void setupDFPlayer_soft()  {
   }
 }
 
-// */
+*/
 
-/*
 void setupDFPlayer_hard() {
   // This is hardware serial communication setup. [Check the software and hardware serial communication difference online/chatGPT]
-  Serial.begin(9600); // Initialize the hardware serial port
+  hard_Serial.begin(9600, SERIAL_8N1, UART_RX_PIN, UART_TX_PIN); // Start UART2 (Serial2) on GPIO16 (RX) and GPIO17 (TX)
+
   Serial.println("Initializing DFPlayer...");
   delay(100); // Add a delay to allow DFPlayer Mini to power up
 
-  if (!myDFPlayer.begin(Serial))
-    // Pass the Serial object to DFPlayer's begin() function
+  if (!myDFPlayer.begin(hard_Serial))
+    // Pass the *** object to DFPlayer's begin() function
     Serial.println(F("Unable to begin:: Please recheck the connection/ insert the SD card!"));
 
-  else if (myDFPlayer.begin(Serial))  {
+  else if (myDFPlayer.begin(hard_Serial))  {
     Serial.println(F("DFPlayer Mini online."));
     myDFPlayer.volume(20); // Set volume value (0~30)
     myDFPlayer.play(1);    // Will Play initialization sound.
   }
 }
 
-*/
+
 
 void playAlarm()
 {
-    static unsigned long alarmInterval = 1000;       // Interval of 1 second for each alarm sound
+    static unsigned long alarmInterval = 3000;       // Interval of ** second for each alarm sound
     static unsigned long alarmPreMillis = 0;         // Previous time when the alarm was played
 
     unsigned long alarmCurrentMillis = millis();     // Current time
@@ -452,7 +467,7 @@ void playAlarm()
     static bool alarmCompleted = false;              // Flag to indicate if all alarms for the hour have been completed
 
     // Check if the condition to play the alarm is met
-    if ((currentDateTime.minute == set_min_for_alrm) && !night() && !alarmCompleted)
+    if ((currentDateTime.minute == set_min_for_alrm) && night() && !alarmCompleted)
     {
         int alrm_hour = currentDateTime.hour;
 
