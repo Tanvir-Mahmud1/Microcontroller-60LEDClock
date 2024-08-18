@@ -57,6 +57,17 @@ static const uint8_t monthDays[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30,
 #define DATA_PIN D5  //Check Data Pin where it is connected..............................
 CRGB LEDs[NUM_LEDS];
 
+// Below code is for Hour Notification sound, Developed by Tanvir.------------------------(1)
+#include <SoftwareSerial.h>
+#include <DFRobotDFPlayerMini.h>
+
+SoftwareSerial mySoftwareSerial(D2, D3); // RX, TX respectively, [connect RX pin to dfPlayer's TX pin and TX pin to dfPlayer's RX pin]
+DFRobotDFPlayerMini myDFPlayer;
+
+int set_min_for_alrm = 0;  // This line is for demo purpose, we can remove this line and set the value diretly in playAlarm() function.
+// ---------------------------------------------------------------------------------------(1)
+
+
 struct DateTime {
   int year;
   byte month;
@@ -78,6 +89,10 @@ void setup() {
   Serial.begin(115200);
   delay(10);
   Serial.println("\r\n");
+
+  // setupDFPlayer_soft();    // Initialize DFPlayer Mini------------------------------(2)
+  // setupDFPlayer_hard();
+
 
   startWiFi();
   startUDP();
@@ -109,6 +124,9 @@ void setup() {
 
 
 void loop() {
+
+  // playAlarm();  //   -----------------------------------------------------------------------(3)
+
   unsigned long currentMillis = millis();
 
   if (currentMillis - prevNTP > intervalNTP) {  // If 24 hours has passed since last NTP request
@@ -284,21 +302,24 @@ void convertTime(uint32_t time) {
 
 #ifdef DEBUG_ON
   Serial.print("Time: ");
-  Serial.print(currentDateTime.hour);
+  if (currentDateTime.hour >= 24) Serial.print(00);
+  else Serial.print(currentDateTime.hour);
   Serial.print(":");
   Serial.print(currentDateTime.minute);
   Serial.print(":");
   Serial.print(currentDateTime.second);
 
   Serial.print("; Date: ");
-  Serial.print(currentDateTime.day);
+  if (currentDateTime.hour >= 24) Serial.print(currentDateTime.day + 1);
+  else Serial.print(currentDateTime.day);
   Serial.print("/");
   Serial.print(currentDateTime.month);
   Serial.print("/");
   Serial.print(currentDateTime.year);
   Serial.print("; Day_of_week: ");
   
-  Serial.print(getDayName(currentDateTime.dayofweek+1));  // getDayName() function will convert number to name which takes 1 argument "currentDateTime.dayofweek+1"
+  if (currentDateTime.hour >= 24) Serial.print(getDayName(currentDateTime.dayofweek + 1));
+  else Serial.print(getDayName(currentDateTime.dayofweek));  // getDayName() function will convert number to name which takes 1 argument "currentDateTime.dayofweek+1"
   // Serial.print(currentDateTime.dayofweek+1);
 
   Serial.print("; Summer_time: ");
@@ -343,13 +364,14 @@ void set_night_brightness() {
 
 String getDayName(int daysNumber) {
   switch(daysNumber) {
-    case 2: return "Sunday";
-    case 3: return "Monday";
-    case 4: return "Tuesday";
-    case 5: return "Wednesday";
-    case 6: return "Thursday";
-    case 7: return "Friday";
-    case 8: return "Saturday";
+    case 1: return "Sunday";
+    case 2: return "Monday";
+    case 3: return "Tuesday";
+    case 4: return "Wednesday";
+    case 5: return "Thursday";
+    case 6: return "Friday";
+    case 7: return "Saturday";
+    case 8: return "Sunday";    // This line is for making code simple, when its >=24 then i'm adding 1 to daysNumber which will make it 8, so i made 8 to sunday again to solve that problem easily.
     default: return "Invalid day";
   }
 }
@@ -378,4 +400,93 @@ void random_color_show() {
   }
 }
 
+
+// Below code is for Hour Notification sound, Developed by Tanvir.-------------------------------------(4)
+// /*
+void setupDFPlayer_soft()  { 
+  // This is software serial communication setup. [Check the software and hardware serial communication difference online/chatGPT]
+  mySoftwareSerial.begin(9600);       // Begin software serial communication, to communicate with dfPlayer Mini.
+  Serial.println("Initializing DFPlayer...");
+  delay(100); // Add a delay to allow DFPlayer Mini to power up
+
+  if (!myDFPlayer.begin(mySoftwareSerial))
+    Serial.println(F("Unable to begin:: Please recheck the connection/ insert the SD card!"));
+
+  else if (myDFPlayer.begin(mySoftwareSerial))  {
+    Serial.println(F("DFPlayer Mini online."));
+    myDFPlayer.volume(30); // Set volume value (0~30)
+    myDFPlayer.play(1);    // Will Play initialization sound.
+  }
+}
+
+// */
+
+/*
+void setupDFPlayer_hard() {
+  // This is hardware serial communication setup. [Check the software and hardware serial communication difference online/chatGPT]
+  Serial.begin(9600); // Initialize the hardware serial port
+  Serial.println("Initializing DFPlayer...");
+  delay(100); // Add a delay to allow DFPlayer Mini to power up
+
+  if (!myDFPlayer.begin(Serial))
+    // Pass the Serial object to DFPlayer's begin() function
+    Serial.println(F("Unable to begin:: Please recheck the connection/ insert the SD card!"));
+
+  else if (myDFPlayer.begin(Serial))  {
+    Serial.println(F("DFPlayer Mini online."));
+    myDFPlayer.volume(20); // Set volume value (0~30)
+    myDFPlayer.play(1);    // Will Play initialization sound.
+  }
+}
+
+*/
+
+void playAlarm()
+{
+    static unsigned long alarmInterval = 1000;       // Interval of 1 second for each alarm sound
+    static unsigned long alarmPreMillis = 0;         // Previous time when the alarm was played
+
+    unsigned long alarmCurrentMillis = millis();     // Current time
+
+    static byte alarmCount = 0;                      // Count of alarms played in the current hour
+    static bool alarmCompleted = false;              // Flag to indicate if all alarms for the hour have been completed
+
+    // Check if the condition to play the alarm is met
+    if ((currentDateTime.minute == set_min_for_alrm) && !night() && !alarmCompleted)
+    {
+        int alrm_hour = currentDateTime.hour;
+
+        if (alrm_hour == 0) alrm_hour = 12; // Handle midnight (0:00) as 12 AM
+        else if (alrm_hour > 12) alrm_hour = alrm_hour - 12; // Convert 13-23 to 1-11 PM
+
+        if (alarmCurrentMillis - alarmPreMillis >= alarmInterval)
+        {
+            // Play the alarm sound
+            Serial.print("Playing alarm ");
+            Serial.println(alarmCount + 1);
+            myDFPlayer.play(1); // Adjust the file number according to your MP3 file on the SD card
+
+            alarmCount++;
+            alarmPreMillis = alarmCurrentMillis; // Update the previousMillis for the next iteration
+
+            // Check if all alarms for the current hour have been played
+            if (alarmCount >= alrm_hour)
+            {
+                alarmCompleted = true; // Mark the alarm as completed for this hour
+                Serial.println("All alarms played for this hour.");
+            }
+        }
+    }
+    else
+    {
+        // Reset the alarm for the next hour
+        if (alarmCompleted && (currentDateTime.minute != set_min_for_alrm))
+        {
+            // Reset for the next hour
+            alarmCompleted = false;
+            alarmCount = 0; // Reset alarm count for the next hour
+            Serial.println("Ready for the next hour.");
+        }
+    }
+}
 
