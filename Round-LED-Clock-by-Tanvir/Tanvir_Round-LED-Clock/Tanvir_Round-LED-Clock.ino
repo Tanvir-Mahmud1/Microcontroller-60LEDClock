@@ -297,7 +297,6 @@ void convertTime(uint32_t time) {
   currentDateTime.year = year + 1970;
   currentDateTime.month = month + 1;
 
-  // if (summerTime()) currentDateTime.hour += 1;        // Correct European Summer time
 
 #ifdef DEBUG_ON
   Serial.print("Time: ");
@@ -320,10 +319,10 @@ void convertTime(uint32_t time) {
   if (currentDateTime.hour >= 24) Serial.print(getDayName(currentDateTime.dayofweek + 1));
   else Serial.print(getDayName(currentDateTime.dayofweek));  // getDayName() function will convert number to name which takes 1 argument "currentDateTime.dayofweek+1"
 
-  // Serial.print("; Summer_time: ");
-  // Serial.print(summerTime());
-  Serial.print("; Night_time: ");
+
+  Serial.print("; [Night_time: ");
   Serial.print(night());
+  Serial.print("]");
   // Serial.print("; Second indicating LED: ");
   // Serial.print(getLEDMinuteOrSecond(currentDateTime.second););    // These lines are for Checking the SecondLED's LED No., just for Debugging.
   Serial.println();
@@ -331,13 +330,6 @@ void convertTime(uint32_t time) {
 }
 
 
-boolean summerTime() {
-  if (currentDateTime.month < 3 || currentDateTime.month > 10) return false;  // No summer time in Jan, Feb, Nov, Dec
-  if (currentDateTime.month > 3 && currentDateTime.month < 10) return true;   // Summer time in Apr, May, Jun, Jul, Aug, Sep
-  if (currentDateTime.month == 3 && (currentDateTime.hour + 24 * currentDateTime.day) >= (3 + 24 * (31 - (5 * currentDateTime.year / 4 + 4) % 7)) || currentDateTime.month == 10 && (currentDateTime.hour + 24 * currentDateTime.day) < (3 + 24 * (31 - (5 * currentDateTime.year / 4 + 1) % 7)))
-    return true;
-  else  return false;
-}
 
 // Tanvir have modified bellow code as it was throwing error, [check original file to see what was changed]
 boolean night() {
