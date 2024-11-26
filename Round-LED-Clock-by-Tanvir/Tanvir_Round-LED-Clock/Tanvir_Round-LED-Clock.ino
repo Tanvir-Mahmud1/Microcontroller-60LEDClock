@@ -3,7 +3,6 @@
   NTP and summer time code based on:
   https://tttapa.github.io/ESP8266/Chap15%20-%20NTP.html 
   https://github.com/SensorsIot/NTPtimeESP/blob/master/NTPtimeESP.cpp (for US summer time support check this link)
-  Board Name = WEMOS LOLIN32 Lite
 */
 
 #include <WiFi.h>
@@ -14,7 +13,7 @@
 
 const char ssid[] = "🌼 Aparajita 🌼";                // Your network SSID name here
 const char pass[] = "b2nn@321";                        // Your network password here
-unsigned long timeZone = 5.0;                          // Change this value to your local timezone (in my case +6 for Dhaka.)
+unsigned long timeZone = 6.0;                          // Change this value to your local timezone (in my case +6 for Dhaka.)
 const char* NTPServerName = "0.pool.ntp.org";          // Changed from "nl.pool.ntp.org" to "0.pool.ntp.org". Check this site for a list of servers: https://www.pool.ntp.org/en/
 unsigned long intervalNTP = 24 * 60 * 60000;           // Request a new NTP time every 24 hours
 unsigned long updateTimeNTPrequest = 6 * 60 * 60000;   // Request a new NTP time every ** hours
@@ -264,7 +263,7 @@ void sendNTPpacket(IPAddress& address) {
 }
 
 void convertTime(uint32_t time) {
-  time += (3600 * timeZone + 3);     // Here Time adjusted with time zone. [3600 sec x timezone(5 Hour)] added to time. And * additional sec for accuracy.
+  time += (3600 * timeZone + 3);     // Here Time adjusted with time zone. [3600 sec x timezone(* Hour)] added to time. And * additional sec for accuracy.
                                      // As NTP response time is * sec slow with "https://time.is/UTC" and ohter servers so added * addition sec here.
   currentDateTime.second = time % 60;
   currentDateTime.minute = time / 60 % 60;
@@ -298,7 +297,7 @@ void convertTime(uint32_t time) {
   currentDateTime.year = year + 1970;
   currentDateTime.month = month + 1;
 
-  if (summerTime()) currentDateTime.hour += 1;        // Correct European Summer time
+  // if (summerTime()) currentDateTime.hour += 1;        // Correct European Summer time
 
 #ifdef DEBUG_ON
   Serial.print("Time: ");
@@ -321,8 +320,8 @@ void convertTime(uint32_t time) {
   if (currentDateTime.hour >= 24) Serial.print(getDayName(currentDateTime.dayofweek + 1));
   else Serial.print(getDayName(currentDateTime.dayofweek));  // getDayName() function will convert number to name which takes 1 argument "currentDateTime.dayofweek+1"
 
-  Serial.print("; Summer_time: ");
-  Serial.print(summerTime());
+  // Serial.print("; Summer_time: ");
+  // Serial.print(summerTime());
   Serial.print("; Night_time: ");
   Serial.print(night());
   // Serial.print("; Second indicating LED: ");
