@@ -12,11 +12,11 @@
 #define DEBUG_ON
 
 const char ssid[] = "🌼 Aparajita 🌼";                // Your network SSID name here
-const char pass[] = "b2nn@321";                        // Your network password here
+const char pass[] = "tweet@321";                        // Your network password here
 unsigned long timeZone = 6.0;                          // Change this value to your local timezone (in my case +6 for Dhaka.)
 const char* NTPServerName = "0.pool.ntp.org";          // Changed from "nl.pool.ntp.org" to "0.pool.ntp.org". Check this site for a list of servers: https://www.pool.ntp.org/en/
 unsigned long intervalNTP = 24 * 60 * 60000;           // Request a new NTP time every 24 hours
-unsigned long updateTimeNTPrequest = 6 * 60 * 60000;   // Request a new NTP time every ** hours
+unsigned long updateTimeNTPrequest = 24 * 60 * 60000;  // Request a new NTP time every ** hours
 
 /*
 Change the colors here if you want, reference: https://github.com/FastLED/FastLED/wiki/Pixel-reference#predefined-colors-list or https://www.rapidtables.com/web/color/RGB_Color.html
@@ -330,11 +330,10 @@ void convertTime(uint32_t time) {
 }
 
 
-
-// Tanvir have modified bellow code as it was throwing error, [check original file to see what was changed]
+// GPT version of boolean night()
 boolean night() {
-  if (currentDateTime.hour >= NIGHTCUTOFF || currentDateTime.hour < MORNINGCUTOFF) return true;   //  Tanvir modified above code from logical AND to Logical OR.
-  else  return false;
+  int hour = currentDateTime.hour % 24;                   // Ensure it's within 0–23,  [12 % 5 = 2 => 12 divided by 5 is 2 with remainder 2]
+  return (hour >= NIGHTCUTOFF || hour < MORNINGCUTOFF);   // It's night if the hour is >= 23 OR < 6
 }
 
 //__________________________________________________________________________________________________________________
